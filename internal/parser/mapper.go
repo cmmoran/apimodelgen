@@ -11,9 +11,19 @@ import (
 // ToApiStructs converts a set of WorkingTypes into ApiStructs ready for rendering.
 func ToApiStructs(types []*model.WorkingType, opts *Options) []*model.ApiStruct {
 	out := make([]*model.ApiStruct, 0, len(types))
+	seen := make(map[string]bool, len(types))
 
 	for _, wt := range types {
-		if wt == nil || wt.Omit {
+		if wt == nil {
+			continue
+		}
+
+		if opts.ExcludeDeprecated && wt.IsDeprecated {
+			continue
+		}
+
+		// Skip duplicate names (instantiations win because Builder emits them first).
+		if seen[wt.Name] {
 			continue
 		}
 
@@ -71,11 +81,13 @@ func ToApiStructs(types []*model.WorkingType, opts *Options) []*model.ApiStruct 
 		case model.KindStruct:
 			if as := workingStructToApiStruct(wt, opts); as != nil {
 				out = append(out, as)
+				seen[wt.Name] = true
 			}
 
 		case model.KindAlias:
 			if as := workingAliasToApiStruct(wt, opts); as != nil {
 				out = append(out, as)
+				seen[wt.Name] = true
 			}
 		}
 
@@ -104,7 +116,13 @@ func workingStructToApiStruct(wt *model.WorkingType, opts *Options) *model.ApiSt
 	}
 
 	for _, wf := range wt.Fields {
-		if wf == nil || wf.Omit {
+		if wf == nil {
+			continue
+		}
+		if shouldOmitWorkingField(wf, opts) {
+			continue
+		}
+		if opts.ExcludeDeprecated && wf.Deprecated {
 			continue
 		}
 		// Allow anonymous embedded fields when IncludeEmbedded is active.
@@ -131,7 +149,7 @@ func workingFieldToApiField(wf *model.WorkingField) *model.ApiField {
 		Tag:        wf.Tag,
 		RawTag:     wf.RawTag,
 		Comment:    wf.Comment,
-		Omit:       wf.Omit,
+		Omit:       false,
 		IsEmbedded: wf.Embedded,
 	}
 	if wf.Embedded {

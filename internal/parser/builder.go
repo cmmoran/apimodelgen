@@ -19,8 +19,9 @@ type Builder struct {
 	raws    RawStructs
 	imports map[string]*ImportMeta
 
-	byName    map[string]*model.WorkingType
-	resolving map[string]bool
+	byName         map[string]*model.WorkingType
+	resolving      map[string]bool
+	instantiations []*model.WorkingType
 }
 
 // NewBuilder initializes a Builder with options, raw structs, and imports.
@@ -31,12 +32,13 @@ func NewBuilder(
 	parser *Parser,
 ) *Builder {
 	return &Builder{
-		parser:    parser,
-		opts:      opts,
-		raws:      raws,
-		imports:   imports,
-		byName:    make(map[string]*model.WorkingType),
-		resolving: make(map[string]bool),
+		parser:         parser,
+		opts:           opts,
+		raws:           raws,
+		imports:        imports,
+		byName:         make(map[string]*model.WorkingType),
+		resolving:      make(map[string]bool),
+		instantiations: []*model.WorkingType{},
 	}
 }
 
@@ -44,7 +46,7 @@ func NewBuilder(
 //  1. Create WorkingType shells for each RawStruct.
 //  2. Populate fields/aliases.
 //  3. Apply all transformations.
-//  4. Return all non-omitted WorkingTypes.
+//  4. Return all WorkingTypes (omission happens during generation).
 func (b *Builder) BuildAll() []*model.WorkingType {
 	// 1) Create shells for all known raw structs.
 	for _, raw := range b.raws {
@@ -63,11 +65,24 @@ func (b *Builder) BuildAll() []*model.WorkingType {
 	for _, wt := range b.byName {
 		b.applyTransformations(wt)
 	}
+	for _, inst := range b.instantiations {
+		b.applyTransformations(inst)
+	}
 
-	// 4) Collect non-omitted types.
-	out := make([]*model.WorkingType, 0, len(b.byName))
+	// 4) Collect all types; omission is deferred to generation.
+	out := make([]*model.WorkingType, 0, len(b.byName)+len(b.instantiations))
+
+	// Prefer concrete instantiations over their generic templates by emitting
+	// them first. Downstream mapping can then skip later duplicates by name.
+	for _, inst := range b.instantiations {
+		if inst == nil {
+			continue
+		}
+		out = append(out, inst)
+	}
+
 	for _, wt := range b.byName {
-		if wt == nil || wt.Omit {
+		if wt == nil {
 			continue
 		}
 		out = append(out, wt)
@@ -140,11 +155,6 @@ func (b *Builder) populateFields(wt *model.WorkingType) {
 //   - attach the resolved WorkingType.
 func (b *Builder) resolveRawField(rf *model.RawField) []*model.WorkingField {
 	if rf == nil {
-		return nil
-	}
-
-	// Skip by tag filters.
-	if b.shouldOmitFieldByTag(rf) {
 		return nil
 	}
 
@@ -279,6 +289,7 @@ func (b *Builder) instantiateGeneric(base *model.WorkingType, args []*model.Work
 		Fields:     make([]*model.WorkingField, 0, len(base.Fields)),
 		Comment:    base.Comment,
 		IsExternal: base.IsExternal,
+		TypeParams: nil, // concrete instantiation
 	}
 
 	// Use the REAL generic parameter names discovered from the AST (RawStruct→WorkingType)
@@ -296,6 +307,21 @@ func (b *Builder) instantiateGeneric(base *model.WorkingType, args []*model.Work
 		newField := *f // shallow copy ok, we'll rewrite Type
 		newField.Type = b.substituteParamsInWT(f.Type, paramNames, args)
 		inst.Fields = append(inst.Fields, &newField)
+	}
+
+	// Track the instantiation so it can be emitted later as a concrete type
+	// (with resolved type arguments) rather than the generic template.
+	// Avoid duplicate entries with the same name and argument count.
+	seen := func() bool {
+		for _, existing := range b.instantiations {
+			if existing.Name == inst.Name && len(existing.Fields) == len(inst.Fields) {
+				return true
+			}
+		}
+		return false
+	}()
+	if !seen {
+		b.instantiations = append(b.instantiations, inst)
 	}
 
 	return inst
@@ -377,38 +403,6 @@ func (b *Builder) resolveTypeExprAlias(aliasName string, aliasPtr *bool) *model.
 		Kind:       model.KindSlice,
 		Underlying: elem,
 	}
-}
-
-// -----------------------------------------------------------------------------
-// Helper: field / tag filters
-// -----------------------------------------------------------------------------
-
-// shouldOmitFieldByTag implements Options.ExcludeByTags for a field.
-func (b *Builder) shouldOmitFieldByTag(rf *model.RawField) bool {
-	if rf == nil || rf.TagLit == nil {
-		return false
-	}
-	if len(b.opts.ExcludeByTags) == 0 {
-		return false
-	}
-
-	raw := strings.Trim(rf.TagLit.Value, "`")
-	if raw == "" {
-		return false
-	}
-
-	st := reflect.StructTag(raw)
-	for _, f := range b.opts.ExcludeByTags {
-		if v, ok := st.Lookup(f.Key); ok {
-			for _, part := range strings.Split(v, ";") {
-				if part == f.Value {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
 }
 
 // -----------------------------------------------------------------------------
@@ -663,7 +657,7 @@ func (b *Builder) flattenEmbedded(wt *model.WorkingType) {
 			if b.opts.FlattenEmbedded {
 				if f.Type != nil && f.Type.Kind == model.KindStruct && len(f.Type.Fields) > 0 {
 					// inline real fields
-					out = append(out, f.Type.Fields...)
+					out = append(out, filterPresentFields(f.Type.Fields)...)
 				}
 				// either way: DROP the wrapper
 				continue
@@ -673,7 +667,7 @@ func (b *Builder) flattenEmbedded(wt *model.WorkingType) {
 			if b.opts.IncludeEmbedded {
 				out = append(out, f)
 				if f.Type != nil && f.Type.Kind == model.KindStruct && len(f.Type.Fields) > 0 {
-					out = append(out, f.Type.Fields...)
+					out = append(out, filterPresentFields(f.Type.Fields)...)
 				}
 				continue
 			}
@@ -706,11 +700,11 @@ func (b *Builder) flattenTagEmbedded(wt *model.WorkingType) {
 		switch {
 		case b.opts.FlattenEmbedded:
 			// Replace wrapper with its fields.
-			out = append(out, f.Type.Fields...)
+			out = append(out, filterPresentFields(f.Type.Fields)...)
 		case b.opts.IncludeEmbedded:
 			// Keep wrapper and also inline inner fields.
 			out = append(out, f)
-			out = append(out, f.Type.Fields...)
+			out = append(out, filterPresentFields(f.Type.Fields)...)
 		default:
 			// Neither flatten nor include embedded: keep wrapper only.
 			out = append(out, f)
@@ -719,26 +713,37 @@ func (b *Builder) flattenTagEmbedded(wt *model.WorkingType) {
 	wt.Fields = out
 }
 
+// filterPresentFields returns a new slice containing only non-nil fields.
+// The returned slice shares the underlying field pointers and does not mutate
+// the source slice.
+func filterPresentFields(fields []*model.WorkingField) []*model.WorkingField {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	out := make([]*model.WorkingField, 0, len(fields))
+	for _, f := range fields {
+		if f == nil {
+			continue
+		}
+		out = append(out, f)
+	}
+
+	return out
+}
+
 // -----------------------------------------------------------------------------
 // Transformations driver
 // -----------------------------------------------------------------------------
 
 // applyTransformations runs all WorkingType-level transformations in order.
 func (b *Builder) applyTransformations(wt *model.WorkingType) {
-	if wt == nil || wt.Omit {
+	if wt == nil {
 		return
 	}
 
-	// Exclude whole type by name (Options.ExcludeTypes).
-	if b.isTypeExcluded(wt.Name) {
-		wt.Omit = true
-		return
-	}
-
+	// Record deprecated metadata; omission is applied during generation.
 	b.filterDeprecated(wt)
-	if wt.Omit {
-		return
-	}
 
 	// Flatten embedded fields.
 	b.flattenEmbedded(wt)
@@ -775,18 +780,8 @@ func (b *Builder) filterDeprecated(wt *model.WorkingType) {
 	}
 
 	if strings.Contains(wt.Comment, "Deprecated") || strings.Contains(wt.Comment, "deprecated") {
-		wt.Omit = true
-		return
+		wt.IsDeprecated = true
 	}
-
-	out := make([]*model.WorkingField, 0, len(wt.Fields))
-	for _, f := range wt.Fields {
-		if f == nil || f.Deprecated {
-			continue
-		}
-		out = append(out, f)
-	}
-	wt.Fields = out
 }
 
 // applySuffix appends the configured suffix to the type name if not already present.

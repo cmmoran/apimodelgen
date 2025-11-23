@@ -71,6 +71,18 @@ func (x ApiStructs) Find(name string) *model.ApiStruct {
 	return nil
 }
 
+func (x ApiStructs) Len() int {
+	return len(x)
+}
+
+func (x ApiStructs) Less(i, j int) bool {
+	return x[i].Name < x[j].Name
+}
+
+func (x ApiStructs) Swap(i, j int) {
+	x[i], x[j] = x[j], x[i]
+}
+
 // New executes the parser with opts.
 func New(opts ...Option) (*Parser, error) {
 	o := &Options{
@@ -234,6 +246,9 @@ func (p *Parser) buildPatchStructs() {
 			if p.isGormReadOnly(f.RawTag) {
 				// Use original concrete type, exactly as in DTO
 				pf.Type = f.Type
+			} else if f.IsEmbedded {
+				// Embedded fields should point at the PATCH version of the embedded type
+				pf.Type = p.pointerizePatchStructType(f.Type)
 			} else {
 				// Normal behavior
 				pf.Type = p.buildPatchSliceFieldType(f.Type)
@@ -649,6 +664,45 @@ func pointerizeTypeRef(t *model.TypeRef) *model.TypeRef {
 		IsPtr: true,
 		Elem:  t,
 	}
+}
+
+// pointerizePatchStructType clones the provided TypeRef and returns a pointer
+// to the PATCH version of that struct (Foo → *FooPatch). Pointer/slice metadata
+// from the original TypeRef is preserved inside the returned pointer wrapper.
+func (p *Parser) pointerizePatchStructType(t *model.TypeRef) *model.TypeRef {
+	if t == nil {
+		return nil
+	}
+
+	clone := cloneTypeRef(t)
+	leaf := clone
+	for leaf != nil && leaf.Elem != nil {
+		leaf = leaf.Elem
+	}
+	if leaf != nil && !strings.HasSuffix(leaf.Name, p.Opts.PatchSuffix) {
+		leaf.Name = leaf.Name + p.Opts.PatchSuffix
+	}
+
+	return pointerizeTypeRef(clone)
+}
+
+// cloneTypeRef deep-copies a TypeRef graph.
+func cloneTypeRef(t *model.TypeRef) *model.TypeRef {
+	if t == nil {
+		return nil
+	}
+
+	clone := &model.TypeRef{
+		Name:    t.Name,
+		PkgPath: t.PkgPath,
+		IsPtr:   t.IsPtr,
+		IsSlice: t.IsSlice,
+	}
+	if t.Elem != nil {
+		clone.Elem = cloneTypeRef(t.Elem)
+	}
+
+	return clone
 }
 
 func (p *Parser) buildPatchSliceFieldType(t *model.TypeRef) *model.TypeRef {

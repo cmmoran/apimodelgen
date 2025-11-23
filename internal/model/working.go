@@ -16,6 +16,7 @@ const (
 	KindSlice        // []T
 )
 
+type WorkingTypes []*WorkingType
 type WorkingType struct {
 	// Identity ------------------------------------------------------------
 	Name    string // "User", "AddressDTO"
@@ -23,12 +24,12 @@ type WorkingType struct {
 	Kind    Kind
 
 	// Structure ------------------------------------------------------------
-	Underlying *WorkingType    // alias → its target; pointer → elem; slice → elem
-	Fields     []*WorkingField // only valid when KindStruct
+	Underlying *WorkingType  // alias → its target; pointer → elem; slice → elem
+	Fields     WorkingFields // only valid when KindStruct
 	Comment    string
 	// Generic params and arguments (minimal)
-	TypeParams []string   // for templates, e.g. ["T"]
-	TypeArgs   []*TypeRef // for concrete instantiations, e.g. [uuid.UUID]
+	TypeParams []string // for templates, e.g. ["T"]
+	TypeArgs   TypeRefs // for concrete instantiations, e.g. [uuid.UUID]
 	// Metadata / Behavior --------------------------------------------------
 
 	IsExternal   bool // came from external package
@@ -43,6 +44,7 @@ type WorkingType struct {
 	RawFile *ast.File
 }
 
+type WorkingFields []*WorkingField
 type WorkingField struct {
 	// Identity -------------------------------------------------------------
 	Name     string // final API field name

@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+type RawFields []*RawField
 type RawField struct {
 	Name       string        // Go identifier
 	Comment    string        // top‐of‐field comment
@@ -14,6 +15,7 @@ type RawField struct {
 	IsEmbedded bool
 }
 
+type RawStructs []*RawStruct
 type RawStruct struct {
 	Name       string // type name
 	Alias      *string
@@ -25,6 +27,7 @@ type RawStruct struct {
 	File       *ast.File // to lookup imports for printing
 }
 
+type TypeRefs []*TypeRef
 type TypeRef struct {
 	PkgPath    string // "" for builtins
 	Name       string // "string", "UUID", "MyType"
@@ -34,6 +37,7 @@ type TypeRef struct {
 	Elem       *TypeRef // for Ptr or Slice
 }
 
+type ApiFields []*ApiField
 type ApiField struct {
 	Name       string // exported Go name
 	Type       *TypeRef
@@ -44,12 +48,25 @@ type ApiField struct {
 	IsEmbedded bool
 }
 
+type ApiStructs []*ApiStruct
 type ApiStruct struct {
 	Name     string
 	Alias    *string
 	AliasPtr *bool
 	Comment  string
-	Fields   []*ApiField
+	Fields   ApiFields
 	Imports  map[string]bool // set of imports needed
 	PkgName  string          // e.g. "api_v1"
+}
+
+func (a ApiFields) Len() int {
+	return len(a)
+}
+
+func (a ApiFields) Less(i, j int) bool {
+	return a[i].Name < a[j].Name
+}
+
+func (a ApiFields) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
 }

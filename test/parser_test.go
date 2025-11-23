@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/cmmoran/apimodelgen/internal/parser"
 )
 
 func TestParse(ttt *testing.T) {
@@ -115,7 +118,7 @@ func TestParse(ttt *testing.T) {
 			args: args{
 				opts: []Option{
 					WithInDir(inDir),
-					WithOutDir(fmt.Sprintf("%s/excludetype/api", outDir)),
+					WithOutDir(fmt.Sprintf("%s/excludetag/api", outDir)),
 					WithExcludeByTag("dto", "-"),
 				},
 			},
@@ -124,6 +127,14 @@ func TestParse(ttt *testing.T) {
 	}
 	for _, tt := range tests {
 		ttt.Run(tt.name, func(t *testing.T) {
+			o := &Options{
+				FlattenEmbedded: true,
+			}
+			for _, fn := range tt.args.opts {
+				fn(o)
+			}
+			jsbyt, _ := json.MarshalIndent(o, "", "  ")
+			t.Logf("Options: %v", string(jsbyt))
 			var (
 				got *Parser
 				err error
@@ -146,8 +157,13 @@ func TestParse(ttt *testing.T) {
 				t.Errorf("Render() error = %v", err)
 				return
 			}
-			cmp.Diff(outBuf.String(), string(expectedBytes))
-			require.EqualValuesf(t, outBuf.String(), string(expectedBytes), "Render() got=%s, expected=%s, diff = %s", outBuf.String(), string(expectedBytes), cmp.Diff(outBuf.String(), string(expectedBytes)))
+			diff := cmp.Diff(outBuf.String(), string(expectedBytes))
+			if diff != "" {
+				t.Logf("diff: %s", diff)
+				t.Logf("expected: %s", outBuf.String())
+				t.Logf("actual: %s", string(expectedBytes))
+			}
+			require.EqualValuesf(t, string(expectedBytes), outBuf.String(), "Render() got=%s, expected=%s, diff = %s", outBuf.String(), string(expectedBytes), diff)
 		})
 	}
 }
