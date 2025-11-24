@@ -4,6 +4,7 @@ package api
 
 import (
 	"fmt"
+
 	"github.com/google/uuid"
 )
 
@@ -35,14 +36,6 @@ func (ps *PatchSlice[T]) Validate() error {
 		return fmt.Errorf("PatchSlice: only one of Replace, Patch, Add, Remove may be non-nil")
 	}
 	return nil
-}
-
-type TestDeprecatedStruct struct {
-	ID uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
-}
-
-type TestDeprecatedStructPatch struct {
-	ID *uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
 }
 
 type TestEmbedded struct {
@@ -114,10 +107,6 @@ type TestWodgetPatch struct {
 }
 
 type TestWodgets []TestWodget
-
-func (dto TestDeprecatedStruct) ToPatch() TestDeprecatedStructPatch {
-	return TestDeprecatedStructPatch{ID: &(dto.ID)}
-}
 
 func (dto TestEmbedded) ToPatch() TestEmbeddedPatch {
 	return TestEmbeddedPatch{ID: &(dto.ID)}

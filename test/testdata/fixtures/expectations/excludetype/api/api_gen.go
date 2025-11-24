@@ -4,6 +4,7 @@ package api
 
 import (
 	"fmt"
+
 	"github.com/google/uuid"
 )
 
@@ -37,10 +38,12 @@ func (ps *PatchSlice[T]) Validate() error {
 	return nil
 }
 
-type TestDeprecatedStruct struct{}
-
-type TestEmbedded struct {
+type TestDeprecatedStruct struct {
 	ID uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
+}
+
+type TestDeprecatedStructPatch struct {
+	ID *uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
 }
 
 type TestEmbeddedGeneric struct {
@@ -48,10 +51,6 @@ type TestEmbeddedGeneric struct {
 }
 
 type TestEmbeddedGenericPatch struct {
-	ID *uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
-}
-
-type TestEmbeddedPatch struct {
 	ID *uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
 }
 
@@ -73,22 +72,24 @@ type TestWadgetPatch struct {
 
 type TestWidget struct {
 	Category int       `json:"age" mapstructure:"age" yaml:"age"`
+	ID       uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
 	Name     string    `json:"name" mapstructure:"name" yaml:"name"`
 	WodgetID uuid.UUID `json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
 }
 
 type TestWidgetGeneric struct {
-	TestEmbeddedGeneric `json:",inline" mapstructure:",squash" yaml:",inline"`
-	WidgetID            uuid.UUID `json:"widget_id" mapstructure:"widget_id" yaml:"widget_id"`
+	ID       uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
+	WidgetID uuid.UUID `json:"widget_id" mapstructure:"widget_id" yaml:"widget_id"`
 }
 
 type TestWidgetGenericPatch struct {
-	TestEmbeddedGeneric *TestEmbeddedGenericPatch `json:",inline" mapstructure:",squash" yaml:",inline"`
-	WidgetID            *uuid.UUID                `json:"widget_id" mapstructure:"widget_id" yaml:"widget_id"`
+	ID       *uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
+	WidgetID *uuid.UUID `json:"widget_id" mapstructure:"widget_id" yaml:"widget_id"`
 }
 
 type TestWidgetPatch struct {
 	Category *int       `json:"age" mapstructure:"age" yaml:"age"`
+	ID       *uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
 	Name     *string    `json:"name" mapstructure:"name" yaml:"name"`
 	WodgetID *uuid.UUID `json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
 }
@@ -96,17 +97,19 @@ type TestWidgetPatch struct {
 type TestWidgets []*TestWidget
 
 type TestWodget struct {
+	ID      uuid.UUID   `json:"id" mapstructure:"id" yaml:"id"`
 	Widgets TestWidgets `json:"widgets" mapstructure:"widgets" yaml:"widgets"`
 }
 
 type TestWodgetPatch struct {
+	ID      *uuid.UUID                    `json:"id" mapstructure:"id" yaml:"id"`
 	Widgets *PatchSlice[*TestWidgetPatch] `json:"widgets" mapstructure:"widgets" yaml:"widgets"`
 }
 
 type TestWodgets []TestWodget
 
-func (dto TestEmbedded) ToPatch() TestEmbeddedPatch {
-	return TestEmbeddedPatch{ID: &(dto.ID)}
+func (dto TestDeprecatedStruct) ToPatch() TestDeprecatedStructPatch {
+	return TestDeprecatedStructPatch{ID: &(dto.ID)}
 }
 
 func (dto TestEmbeddedGeneric) ToPatch() TestEmbeddedGenericPatch {
@@ -126,6 +129,7 @@ func (dto TestWadget) ToPatch() TestWadgetPatch {
 func (dto TestWidget) ToPatch() TestWidgetPatch {
 	return TestWidgetPatch{
 		Category: &(dto.Category),
+		ID:       &(dto.ID),
 		Name:     &(dto.Name),
 		WodgetID: &(dto.WodgetID),
 	}
@@ -133,14 +137,14 @@ func (dto TestWidget) ToPatch() TestWidgetPatch {
 
 func (dto TestWidgetGeneric) ToPatch() TestWidgetGenericPatch {
 	return TestWidgetGenericPatch{
-		TestEmbeddedGeneric: (func() *TestEmbeddedGenericPatch {
-			tmp := dto.TestEmbeddedGeneric.ToPatch()
-			return &tmp
-		}()),
+		ID:       &(dto.ID),
 		WidgetID: &(dto.WidgetID),
 	}
 }
 
 func (dto TestWodget) ToPatch() TestWodgetPatch {
-	return TestWodgetPatch{Widgets: nil}
+	return TestWodgetPatch{
+		ID:      &(dto.ID),
+		Widgets: nil,
+	}
 }

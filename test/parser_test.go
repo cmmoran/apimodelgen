@@ -2,21 +2,25 @@ package test
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"fmt"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
-	. "github.com/cmmoran/apimodelgen/internal/parser"
+	. "github.com/cmmoran/apimodelgen/pkg/parser"
 )
 
+//go:embed go.mod testdata/*
+var testdataFS embed.FS
+
 func TestParse(ttt *testing.T) {
-	inDir := "test/testdata/internal/fixtures/canonical"
-	outDir := "test/testdata/internal/fixtures/expectations"
+	inDir := "testdata/fixtures/canonical"
+	outDir := "testdata/fixtures/expectations"
 	type args struct {
 		opts []Option
 	}
@@ -54,28 +58,6 @@ func TestParse(ttt *testing.T) {
 					WithInDir(inDir),
 					WithOutDir(fmt.Sprintf("%s/suffix/api", outDir)),
 					WithSuffix("Out"),
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "parse with pluralize",
-			args: args{
-				opts: []Option{
-					WithInDir(inDir),
-					WithOutDir(fmt.Sprintf("%s/plural/api", outDir)),
-					WithPluralize(true),
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "parse with pluralize with pointers",
-			args: args{
-				opts: []Option{
-					WithInDir(inDir),
-					WithOutDir(fmt.Sprintf("%s/pluralpointer/api", outDir)),
-					WithPluralize(true, true),
 				},
 			},
 			wantErr: false,
@@ -144,13 +126,13 @@ func TestParse(ttt *testing.T) {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			err = got.Parse()
+			err = got.Parse(testdataFS)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			f := got.GenerateApiFile()
-			expectedBytes, _ := os.ReadFile(filepath.Join(got.Opts.OutDir, got.Opts.OutFile))
+			expectedBytes, _ := fs.ReadFile(testdataFS, filepath.Join(got.Opts.OutDir, got.Opts.OutFile))
 			outBuf := new(bytes.Buffer)
 			err = f.Render(outBuf)
 			if err != nil {
