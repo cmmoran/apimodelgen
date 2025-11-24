@@ -27,7 +27,6 @@ type TagFilter struct {
 // OutFile           – output filename
 // Suffix            – append to every struct name.
 // PatchSuffix       – append to every struct name for patch files, includes Suffix.
-// Pluralize         – create slice aliases (pointer slice if PointerSlice).
 // KeepORMTags       – keep orm-specific tags in generated types, gorm:"..." db:"..." etc
 // FlattenEmbedded   – lift anonymous / tag‑inline fields into parent (default true).
 // IncludeEmbedded   – keep embedded field itself + inner fields.
@@ -41,8 +40,6 @@ type Options struct {
 	OutFile           string      `json:"out_file,omitempty" yaml:"out_file,omitempty" toml:"out_file,omitempty" mapstructure:"out_file,omitempty"`
 	Suffix            string      `json:"suffix,omitempty" yaml:"suffix,omitempty" toml:"suffix,omitempty" mapstructure:"suffix,omitempty"`
 	PatchSuffix       string      `json:"patch_suffix,omitempty" yaml:"patch_suffix,omitempty" toml:"patch_suffix,omitempty" mapstructure:"patch_suffix,omitempty"`
-	Pluralize         bool        `json:"pluralize,omitempty" yaml:"pluralize,omitempty" toml:"pluralize,omitempty" mapstructure:"pluralize,omitempty"`
-	PointerSlice      bool        `json:"pointer_slice,omitempty" yaml:"pointer_slice,omitempty" toml:"pointer_slice,omitempty" mapstructure:"pointer_slice,omitempty"`
 	KeepORMTags       bool        `json:"keep_orm_tags,omitempty" yaml:"keep_orm_tags,omitempty" toml:"keep_orm_tags,omitempty" mapstructure:"keep_orm_tags,omitempty"`
 	FlattenEmbedded   bool        `json:"flatten_embedded,omitempty" yaml:"flatten_embedded,omitempty" toml:"flatten_embedded,omitempty" mapstructure:"flatten_embedded,omitempty"`
 	IncludeEmbedded   bool        `json:"include_embedded,omitempty" yaml:"include_embedded,omitempty" toml:"include_embedded,omitempty" mapstructure:"include_embedded,omitempty"`
@@ -58,8 +55,6 @@ func NewOptions() *Options {
 		OutFile:         "api_gen.go",
 		Suffix:          "",
 		PatchSuffix:     "Patch",
-		Pluralize:       false,
-		PointerSlice:    false,
 		KeepORMTags:     false,
 		FlattenEmbedded: false,
 		IncludeEmbedded: true,
@@ -74,9 +69,6 @@ func (o *Options) Normalize(excludeByTagsStrings ...string) {
 	}
 	if o.FlattenEmbedded == o.IncludeEmbedded {
 		panic("FlattenEmbedded and IncludeEmbedded are mutually exclusive")
-	}
-	if o.PointerSlice && !o.Pluralize {
-		o.Pluralize = true
 	}
 	if strings.Contains(o.InDir, ".") {
 		o.InDir, _ = filepath.Abs(o.InDir)
@@ -106,21 +98,6 @@ func WithOutDir(d string) Option      { return func(o *Options) { o.OutDir = d }
 func WithOutFile(f string) Option     { return func(o *Options) { o.OutFile = f } }
 func WithSuffix(s string) Option      { return func(o *Options) { o.Suffix = s } }
 func WithPatchSuffix(s string) Option { return func(o *Options) { o.PatchSuffix = s } }
-func WithPluralize(pluralize ...bool) Option {
-	return func(o *Options) {
-		switch len(pluralize) {
-		case 0:
-			o.Pluralize = true
-			o.PointerSlice = false
-		case 1:
-			o.Pluralize = pluralize[0]
-			o.PointerSlice = false
-		case 2:
-			o.Pluralize = pluralize[0]
-			o.PointerSlice = pluralize[1]
-		}
-	}
-}
 func WithFlattenEmbedded() Option {
 	return func(o *Options) { o.FlattenEmbedded, o.IncludeEmbedded = true, false }
 }

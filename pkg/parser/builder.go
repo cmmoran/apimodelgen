@@ -6,9 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jinzhu/inflection"
-
-	"github.com/cmmoran/apimodelgen/internal/model"
+	"github.com/cmmoran/apimodelgen/pkg/model"
 )
 
 // Builder constructs a normalized graph of WorkingType values from
@@ -834,32 +832,6 @@ func (b *Builder) expandAlias(wt *model.WorkingType) {
 	wt.Kind = wt.Underlying.Kind
 	wt.Fields = wt.Underlying.Fields
 	wt.Underlying = wt.Underlying.Underlying
-}
-
-func (b *Builder) applyPluralization(wt *model.WorkingType) {
-	if !b.opts.Pluralize {
-		return
-	}
-
-	for _, f := range wt.Fields {
-		if f.Type.Kind == model.KindStruct {
-			plural := inflection.Plural(f.Type.Name)
-			target := b.byName[plural]
-			if target != nil {
-				if b.opts.PointerSlice {
-					f.Type = &model.WorkingType{
-						Kind:       model.KindSlice,
-						Underlying: &model.WorkingType{Kind: model.KindPointer, Underlying: target},
-					}
-				} else {
-					f.Type = &model.WorkingType{
-						Kind:       model.KindSlice,
-						Underlying: target,
-					}
-				}
-			}
-		}
-	}
 }
 
 func substituteTypeParam(expr ast.Expr, paramName string, arg ast.Expr) ast.Expr {

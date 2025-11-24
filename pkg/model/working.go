@@ -38,7 +38,7 @@ type WorkingType struct {
 	Embedded     bool // this type was originally embedded in a struct
 
 	// Transformation Flags -------------------------------------------------
-	NameResolved bool // indicates suffix/pluralization has already been applied
+	NameResolved bool // indicates suffix has already been applied
 	AliasApplied bool // indicates alias-flattening processed
 
 	RawFile *ast.File

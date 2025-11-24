@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/cmmoran/apimodelgen/internal/model"
+	"github.com/cmmoran/apimodelgen/pkg/model"
 )
 
 // ToApiStructs converts a set of WorkingTypes into ApiStructs ready for rendering.

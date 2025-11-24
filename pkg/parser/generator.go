@@ -8,7 +8,7 @@ import (
 
 	"github.com/dave/jennifer/jen"
 
-	"github.com/cmmoran/apimodelgen/internal/model"
+	"github.com/cmmoran/apimodelgen/pkg/model"
 )
 
 func (p *Parser) GenerateApiFile() *jen.File {
@@ -143,7 +143,7 @@ func (p *Parser) GenerateApiFile() *jen.File {
 					continue
 				}
 			}
-			if p.Opts.PointerSlice || (api.AliasPtr != nil && *api.AliasPtr) {
+			if api.AliasPtr != nil && *api.AliasPtr {
 				f.Type().
 					Id(api.Name).
 					Index().

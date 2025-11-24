@@ -4,7 +4,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/cmmoran/apimodelgen/internal/parser"
+	"github.com/cmmoran/apimodelgen/pkg/parser"
 )
 
 func Generate(p *parser.Options) {

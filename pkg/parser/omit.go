@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/cmmoran/apimodelgen/internal/model"
+	"github.com/cmmoran/apimodelgen/pkg/model"
 )
 
 // shouldOmitWorkingField determines whether a WorkingField should be omitted

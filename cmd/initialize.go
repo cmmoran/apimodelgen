@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/cmmoran/apimodelgen/internal/action/initialize"
-	"github.com/cmmoran/apimodelgen/internal/parser"
+	"github.com/cmmoran/apimodelgen/pkg/action/initialize"
+	"github.com/cmmoran/apimodelgen/pkg/parser"
 )
 
 func init() {
@@ -32,8 +32,7 @@ func NewInitCommand() *cobra.Command {
 	initCmd.PersistentFlags().StringVarP(&options.OutFile, "output-file", "f", "api_gen.go", "output file where types will be written")
 	initCmd.PersistentFlags().StringVarP(&options.Suffix, "suffix", "s", "", "suffix to append to generated types")
 	initCmd.PersistentFlags().StringVar(&options.PatchSuffix, "patch-suffix", "Patch", "suffix to append to generated PATCH types")
-	initCmd.PersistentFlags().BoolVarP(&options.Pluralize, "pluralize", "P", false, "pluralize types")
-	initCmd.PersistentFlags().BoolVarP(&options.PointerSlice, "pluralize-with-pointers", "p", false, "pluralize types with slices of pointers")
+	initCmd.PersistentFlags().BoolVarP(&options.KeepORMTags, "keep-orm-tags", "k", false, "keep ORM tags in generated types")
 	initCmd.PersistentFlags().BoolVarP(&options.FlattenEmbedded, "flatten-embedded", "F", true, "flatten embedded types' fields into parent")
 	initCmd.PersistentFlags().BoolVarP(&options.IncludeEmbedded, "include-embedded", "E", false, "include embedded types with type generation")
 	initCmd.PersistentFlags().BoolVarP(&options.ExcludeDeprecated, "exclude-deprecated", "d", false, "exclude deprecated fields from generated types")

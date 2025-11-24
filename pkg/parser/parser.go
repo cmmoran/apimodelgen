@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 
-	"github.com/jinzhu/inflection"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/module"
 	"golang.org/x/tools/go/packages"
 
-	"github.com/cmmoran/apimodelgen/internal/model"
+	"github.com/cmmoran/apimodelgen/pkg/model"
 )
 
 type ExternalAlias struct {
@@ -122,16 +122,75 @@ func (p *Parser) BuildWorkingModel() []*model.WorkingType {
 	return b.BuildAll()
 }
 
-func (p *Parser) Parse() error {
+func loadFromFS(fsys fs.FS, rootInFS, pkgImportPath string) ([]*packages.Package, error) {
+	tempRoot, err := os.MkdirTemp("", "embedmod-*")
+	if err != nil {
+		return nil, err
+	}
+
+	overlay := make(map[string][]byte)
+
+	err = fs.WalkDir(fsys, rootInFS, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		rel, rerr := filepath.Rel(rootInFS, path)
+		if rerr != nil {
+			return rerr
+		}
+		absPath := filepath.Join(tempRoot, rel)
+		if d.IsDir() {
+			// Only make directories; files are provided via overlay.
+			return os.MkdirAll(absPath, 0o755)
+		}
+		// Only overlay Go files (you can adjust this).
+		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+		src, serr := fs.ReadFile(fsys, path)
+		if serr != nil {
+			return serr
+		}
+		// Important: overlay key must be an absolute path.
+		overlay[absPath] = src
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &packages.Config{
+		Mode:    packages.LoadImports | packages.LoadAllSyntax,
+		Fset:    token.NewFileSet(),
+		Dir:     tempRoot, // search root
+		Overlay: overlay,  // actual contents from embed.FS
+		Env: append(os.Environ(),
+			"GO111MODULE=on", // or whatever your env needs
+		),
+	}
+
+	// 4. Load by import path (relative to tempRoot layout).
+	return packages.Load(cfg, pkgImportPath)
+}
+
+func (p *Parser) Parse(fs ...fs.FS) error {
 	var (
 		pkgs []*packages.Package
 		err  error
 	)
-	pkgs, err = packages.Load(&packages.Config{
-		Mode: packages.LoadImports | packages.LoadAllSyntax,
-		Dir:  p.Opts.InDir,
-		Fset: token.NewFileSet(),
-	}, "./...")
+	if len(fs) == 0 {
+		pkgs, err = packages.Load(&packages.Config{
+			Mode: packages.LoadImports | packages.LoadAllSyntax,
+			Dir:  p.Opts.InDir,
+			Fset: token.NewFileSet(),
+		}, "./...")
+	} else {
+		pkgs, err = loadFromFS(
+			fs[0],
+			p.Opts.InDir,
+			"./...",
+		)
+	}
 
 	if err != nil {
 		return err
@@ -894,13 +953,6 @@ func (p *Parser) aliasExists(a string) bool {
 		}
 	}
 	return false
-}
-
-func (p *Parser) pluralize(s string) string {
-	if inflection.Singular(s) == s {
-		return p.resolveName(inflection.Plural(s))
-	}
-	return p.resolveName(s)
 }
 
 func (p *Parser) contains(name string) (rawContains bool, apiContains bool) {
