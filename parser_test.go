@@ -1,11 +1,10 @@
-package test
+package main
 
 import (
 	"bytes"
-	"embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -15,12 +14,9 @@ import (
 	. "github.com/cmmoran/apimodelgen/pkg/parser"
 )
 
-//go:embed go.mod testdata/*
-var testdataFS embed.FS
-
 func TestParse(ttt *testing.T) {
-	inDir := "testdata/fixtures/canonical"
-	outDir := "testdata/fixtures/expectations"
+	inDir := "test/testdata/fixtures/canonical"
+	outDir := "test/testdata/fixtures/expectations"
 	type args struct {
 		opts []Option
 	}
@@ -109,6 +105,7 @@ func TestParse(ttt *testing.T) {
 	}
 	for _, tt := range tests {
 		ttt.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			o := &Options{
 				FlattenEmbedded: true,
 			}
@@ -126,13 +123,13 @@ func TestParse(ttt *testing.T) {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			err = got.Parse(testdataFS)
+			err = got.Parse()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			f := got.GenerateApiFile()
-			expectedBytes, _ := fs.ReadFile(testdataFS, filepath.Join(got.Opts.OutDir, got.Opts.OutFile))
+			expectedBytes, _ := os.ReadFile(filepath.Join(got.Opts.OutDir, got.Opts.OutFile))
 			outBuf := new(bytes.Buffer)
 			err = f.Render(outBuf)
 			if err != nil {

@@ -61,7 +61,6 @@ func NewOptions() *Options {
 	}
 }
 
-// Normalize updated for PatchSuffix
 func (o *Options) Normalize(excludeByTagsStrings ...string) {
 	for _, s := range excludeByTagsStrings {
 		sp := strings.Split(s, ":")
