@@ -96,7 +96,7 @@ func TestParse(ttt *testing.T) {
 			args: args{
 				opts: []Option{
 					WithInDir(inDir),
-					WithOutDir(fmt.Sprintf("%s/deprecated/api", outDir)),
+					WithOutDir(fmt.Sprintf("%s/excludedeprecated/api", outDir)),
 					WithExcludeDeprecated(),
 				},
 			},

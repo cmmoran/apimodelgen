@@ -44,7 +44,7 @@ type TestWodgets []TestWodget
 type TestWadget struct {
 	Ref uuid.UUID `gorm:"type:uuid;primaryKey" json:"ref" yaml:"ref" mapstructure:"ref"`
 	Key string    `gorm:"primary_key" json:"key" yaml:"key" mapstructure:"key"`
-	// Deprecated this field will be removed in a subsequent release
+	// DepField Deprecated this field will be removed in a subsequent release
 	DepField string      `gorm:"type:text;" json:"dep_field" yaml:"dep_field" mapstructure:"dep_field"`
 	WodgetID uuid.UUID   `gorm:"type:uuid;" json:"wodget_id" yaml:"wodget_id" mapstructure:"wodget_id"`
 	Wodgets  TestWodgets `gorm:"foreignkey:WodgetID" json:"wodgets" yaml:"wodgets" mapstructure:"wodgets"`
