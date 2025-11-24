@@ -164,7 +164,6 @@ func (p *Parser) GenerateApiFile() *jen.File {
 
 		// NORMAL STRUCT DECLARATION
 		f.Type().Id(api.Name).StructFunc(func(g *jen.Group) {
-			sort.Sort(api.Fields)
 			for _, fld := range api.Fields {
 				// Name as known in the model (for patch structs, map keys, etc).
 				name := fld.Name

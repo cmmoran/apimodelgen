@@ -62,26 +62,26 @@ type TestEmbeddedPatch struct {
 }
 
 type TestWadget struct {
-	DepField string      `gorm:"type:text;" json:"dep_field" mapstructure:"dep_field" yaml:"dep_field"`
-	Key      string      `gorm:"primary_key" json:"key" mapstructure:"key" yaml:"key"`
 	Ref      uuid.UUID   `gorm:"type:uuid;primaryKey" json:"ref" mapstructure:"ref" yaml:"ref"`
+	Key      string      `gorm:"primary_key" json:"key" mapstructure:"key" yaml:"key"`
+	DepField string      `gorm:"type:text;" json:"dep_field" mapstructure:"dep_field" yaml:"dep_field"`
 	WodgetID uuid.UUID   `gorm:"type:uuid;" json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
 	Wodgets  TestWodgets `gorm:"foreignkey:WodgetID" json:"wodgets" mapstructure:"wodgets" yaml:"wodgets"`
 }
 
 type TestWadgetPatch struct {
-	DepField *string                      `gorm:"type:text;" json:"dep_field" mapstructure:"dep_field" yaml:"dep_field"`
-	Key      *string                      `gorm:"primary_key" json:"key" mapstructure:"key" yaml:"key"`
 	Ref      uuid.UUID                    `gorm:"type:uuid;primaryKey" json:"ref" mapstructure:"ref" yaml:"ref"`
+	Key      *string                      `gorm:"primary_key" json:"key" mapstructure:"key" yaml:"key"`
+	DepField *string                      `gorm:"type:text;" json:"dep_field" mapstructure:"dep_field" yaml:"dep_field"`
 	WodgetID *uuid.UUID                   `gorm:"type:uuid;" json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
 	Wodgets  *PatchSlice[TestWodgetPatch] `gorm:"foreignkey:WodgetID" json:"wodgets" mapstructure:"wodgets" yaml:"wodgets"`
 }
 
 type TestWidget struct {
-	Category int       `gorm:"type:numeric(2);" json:"age" mapstructure:"age" yaml:"age"`
 	ID       uuid.UUID `gorm:"primary_key" json:"id" mapstructure:"id" yaml:"id"`
-	Name     string    `gorm:"type:text;" json:"name" mapstructure:"name" yaml:"name"`
 	WodgetID uuid.UUID `gorm:"type:uuid;" json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
+	Name     string    `gorm:"type:text;" json:"name" mapstructure:"name" yaml:"name"`
+	Category int       `gorm:"type:numeric(2);" json:"age" mapstructure:"age" yaml:"age"`
 }
 
 type TestWidgetGeneric struct {
@@ -95,10 +95,10 @@ type TestWidgetGenericPatch struct {
 }
 
 type TestWidgetPatch struct {
-	Category *int       `gorm:"type:numeric(2);" json:"age" mapstructure:"age" yaml:"age"`
 	ID       *uuid.UUID `gorm:"primary_key" json:"id" mapstructure:"id" yaml:"id"`
-	Name     *string    `gorm:"type:text;" json:"name" mapstructure:"name" yaml:"name"`
 	WodgetID *uuid.UUID `gorm:"type:uuid;" json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
+	Name     *string    `gorm:"type:text;" json:"name" mapstructure:"name" yaml:"name"`
+	Category *int       `gorm:"type:numeric(2);" json:"age" mapstructure:"age" yaml:"age"`
 }
 
 type TestWidgets []*TestWidget

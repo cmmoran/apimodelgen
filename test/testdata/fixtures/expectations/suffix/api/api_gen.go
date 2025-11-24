@@ -62,17 +62,17 @@ type TestEmbeddedOutPatch struct {
 }
 
 type TestWadgetOut struct {
-	DepField string         `json:"dep_field" mapstructure:"dep_field" yaml:"dep_field"`
-	Key      string         `json:"key" mapstructure:"key" yaml:"key"`
 	Ref      uuid.UUID      `json:"ref" mapstructure:"ref" yaml:"ref"`
+	Key      string         `json:"key" mapstructure:"key" yaml:"key"`
+	DepField string         `json:"dep_field" mapstructure:"dep_field" yaml:"dep_field"`
 	WodgetID uuid.UUID      `json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
 	Wodgets  TestWodgetsOut `json:"wodgets" mapstructure:"wodgets" yaml:"wodgets"`
 }
 
 type TestWadgetOutPatch struct {
-	DepField *string                         `json:"dep_field" mapstructure:"dep_field" yaml:"dep_field"`
-	Key      *string                         `json:"key" mapstructure:"key" yaml:"key"`
 	Ref      uuid.UUID                       `json:"ref" mapstructure:"ref" yaml:"ref"`
+	Key      *string                         `json:"key" mapstructure:"key" yaml:"key"`
+	DepField *string                         `json:"dep_field" mapstructure:"dep_field" yaml:"dep_field"`
 	WodgetID *uuid.UUID                      `json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
 	Wodgets  *PatchSlice[TestWodgetOutPatch] `json:"wodgets" mapstructure:"wodgets" yaml:"wodgets"`
 }
@@ -88,17 +88,17 @@ type TestWidgetGenericOutPatch struct {
 }
 
 type TestWidgetOut struct {
-	Category int       `json:"age" mapstructure:"age" yaml:"age"`
 	ID       uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
-	Name     string    `json:"name" mapstructure:"name" yaml:"name"`
 	WodgetID uuid.UUID `json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
+	Name     string    `json:"name" mapstructure:"name" yaml:"name"`
+	Category int       `json:"age" mapstructure:"age" yaml:"age"`
 }
 
 type TestWidgetOutPatch struct {
-	Category *int       `json:"age" mapstructure:"age" yaml:"age"`
 	ID       *uuid.UUID `json:"id" mapstructure:"id" yaml:"id"`
-	Name     *string    `json:"name" mapstructure:"name" yaml:"name"`
 	WodgetID *uuid.UUID `json:"wodget_id" mapstructure:"wodget_id" yaml:"wodget_id"`
+	Name     *string    `json:"name" mapstructure:"name" yaml:"name"`
+	Category *int       `json:"age" mapstructure:"age" yaml:"age"`
 }
 
 type TestWidgetsOut []*TestWidgetOut
