@@ -757,14 +757,13 @@ func (b *Builder) applyTransformations(wt *model.WorkingType) {
 	b.dedupeFields(wt)
 }
 
-// isTypeExcluded checks Options.ExcludeTypes (stored as lowercase) against the name.
+// isTypeExcluded checks Options.ExcludeTypes against the name (case-insensitive) of a type.
 func (b *Builder) isTypeExcluded(name string) bool {
 	if len(b.opts.ExcludeTypes) == 0 || name == "" {
 		return false
 	}
-	lower := strings.ToLower(name)
 	for _, t := range b.opts.ExcludeTypes {
-		if t == lower {
+		if strings.EqualFold(t, name) {
 			return true
 		}
 	}
