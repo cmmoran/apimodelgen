@@ -16,10 +16,13 @@ go run .
 
 ## Basic usage
 
-The CLI exposes a single subcommand that performs parsing and code generation:
+The CLI exposes subcommands to generate DTOs directly or to persist versioned snapshots backed by a manifest:
 
 ```bash
 apimodelgen init [flags]
+apimodelgen snapshot [flags]
+apimodelgen snapshot list --manifest .apimodelgen/manifest.yaml
+apimodelgen snapshot diff --manifest .apimodelgen/manifest.yaml
 ```
 
 Example:
@@ -35,6 +38,18 @@ apimodelgen init \
   --exclude-tags "gorm:embedded" \
   --exclude-deprecated
 ```
+
+To capture a versioned snapshot and track it in `.apimodelgen/manifest.yaml`:
+
+```bash
+apimodelgen snapshot \
+  --snapshot-name release \
+  --snapshot-version v1.0.0 \
+  --input-directory ./internal/models \
+  --suffix DTO
+```
+
+This writes generated output into `.apimodelgen/snapshots/release/v1.0.0/` and records the current and previous versions in the manifest so you can diff releases later.
 
 This scans `./internal/models`, builds DTOs plus `Patch` versions for each DTO, and writes the generated code to `./api/api_gen.go`.
 
@@ -58,6 +73,13 @@ Global flags (available on every command):
 - `--exclude-deprecated, -d` – Skip structs whose leading comments contain "deprecated".
 - `--exclude-types, -t` – Comma-separated list of type names to skip (case-insensitive).
 - `--exclude-tags, -T` – Comma-separated list of tag filters formatted as `key:value` (e.g., `gorm:embedded`) used to exclude fields or referenced types.
+
+`snapshot` flags (in addition to all `init` flags):
+
+- `--manifest` – Path to the manifest tracking snapshot metadata (default: `.apimodelgen/manifest.yaml`).
+- `--snapshot-dir` – Root directory where snapshot outputs are written (default: `.apimodelgen/snapshots`).
+- `--snapshot-name` – Logical name or channel for the snapshot (e.g., `release`, default: `current`).
+- `--snapshot-version` – Version string to lock into the manifest; falls back to the binary `--version` or a timestamp when omitted.
 
 > **Note:** `--flatten-embedded` and `--include-embedded` cannot both be enabled; the last one set wins.
 
@@ -87,3 +109,5 @@ exclude_by_tags:
 ## Output
 
 Running `apimodelgen init` renders the generated code to the configured output path, creating the directory if necessary. DTO structs are derived from your input types, and patch structs are synthesized by pointerizing fields or wrapping slices so partial updates can be expressed.
+
+`apimodelgen snapshot` uses the same parsing options but writes generated code to a versioned folder inside `.apimodelgen/snapshots/`. Each run updates `.apimodelgen/manifest.yaml` to record the current and previous versions and the generated file paths, enabling `apimodelgen snapshot list` to enumerate entries and `apimodelgen snapshot diff` to compare the latest two snapshots.
